@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Check docker
+sudo docker version
+
+# Install farmer
+sudo rm -Rf /var/farmer
+sudo NO_INTERACTION=1 hack/install
+sleep 10
+
+# Install farmer-cli
+rm -Rf /tmp/farmer-cli
+git clone https://github.com/farmer-project/farmer-cli.git /tmp/farmer-cli
+echo "FROM golang:1.4-onbuild" > /tmp/farmer-cli/Dockerfile
+docker build -t farmer-cli /tmp/farmer-cli
+docker run --rm --name farmer-cli farmer-cli
+docker run --rm -v /tmp/farmer-cli:/go/src/app -w /go/src/app farmer-cli go build -v -o farmer-cli
+sudo chmod +x /tmp/farmer-cli/farmer-cli
+sudo rm /usr/bin/farmer-cli &>/dev/null
+sudo ln -s /tmp/farmer-cli/farmer-cli /usr/bin/farmer-cli
+sudo rm ${HOME}/.farmer.cfg &>/dev/null
+echo ServerUrl = \"http://localhost:5549\" >> ${HOME}/.farmer.cfg
+farmer-cli
+
+# Preparation
+DIR=`dirname $BASH_SOURCE`
+EXIT_STATUS=0
+
+# Test suites
+${DIR}/suites/create_box || EXIT_STATUS=$?
+${DIR}/suites/list_all_boxes || EXIT_STATUS=$?
+
+exit ${EXIT_STATUS}

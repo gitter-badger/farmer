@@ -1,0 +1,3 @@
+#!/bin/bash
+
+farmer-cli list | grep REPOSITORY
